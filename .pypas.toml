@@ -1,0 +1,41 @@
+version = "0.1.9"
+slug = "gameside"
+bundle = [
+    "/docs/README.pdf",
+    "/tests",
+    "/fixtures",
+    "/factories",
+    "/media/games/covers/example*.jpg",
+    "/media/games/covers/default.png",
+    "/media/platforms/logos/example*.jpg",
+    "/media/platforms/logos/default.png",
+    "/.gitignore",
+    "/pyproject.toml",
+    "/uv.lock",
+    "/justfile",
+    "/pytest.ini",
+]
+backup_on_update = ["justfile"]
+delete_on_update = ["pytest.ini"]
+exclude_from_zip = [
+    "*.pyc",
+    ".DS_Store",
+    "/.git",
+    "*.bak",
+    ".venv",
+    ".env",
+    "*cache*",
+]
+test_cmd = "uv run pytest"
+
+[release_notes]
+"0.1.0" = "Primera versión"
+"0.1.1" = "Ignora carpetas cache al crear el zip"
+"0.1.2" = "Integra pytest.ini en pyproject.toml"
+"0.1.3" = "Añade correciones menores en enunciado"
+"0.1.4" = "Corrige sentencias SQL en limpieza de datos"
+"0.1.5" = "Aclara API para Game (pegi) y Order (status)"
+"0.1.6" = "Evita errores testing por custom converters"
+"0.1.7" = "Arregla orden de errores en /api/orders/"
+"0.1.8" = "Corrige errores menores en justfile y README"
+"0.1.9" = "Añade score a los tests"
