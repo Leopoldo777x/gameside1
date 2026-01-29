@@ -1,20 +1,23 @@
 import json
+import re
+from datetime import datetime, date
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+
+from games.models import Game
+from games.serializers import GameSerializer
 from shared.decorators import require_http_methods
 from users.decorators import auth_required
+
 from .models import Order
-from games.models import Game
 from .serializers import OrderSerializer
-from games.serializers import GameSerializer
+
 
 @csrf_exempt
 @require_http_methods('POST')
 @auth_required
 def add_order(request):
-    order = Order.objects.create(
-        user=request.user
-    )
+    order = Order.objects.create(user=request.user)
     return JsonResponse({'id': order.pk})
 
 
@@ -57,9 +60,14 @@ def add_game_to_order(request, order_pk):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON body'}, status=400)
     required = {'game-slug'}
-    
+
     if required - payload.keys():
-        return JsonResponse({'error': 'Missing required fields',}, status=400)
+        return JsonResponse(
+            {
+                'error': 'Missing required fields',
+            },
+            status=400,
+        )
     try:
         order = Order.objects.get(pk=order_pk)
     except Order.DoesNotExist:
@@ -87,14 +95,68 @@ def change_order_status(request, order_pk):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON body'}, status=400)
     required = {'status'}
-    
+
     if required - payload.keys():
-        return JsonResponse({'error': 'Missing required fields',}, status=400)
+        return JsonResponse(
+            {
+                'error': 'Missing required fields',
+            },
+            status=400,
+        )
     try:
         order = Order.objects.get(pk=order_pk)
     except Order.DoesNotExist:
         return JsonResponse({'error': 'Order not found'}, status=404)
     if request.user != order.user:
         return JsonResponse({'error': 'User is not the owner of the requested order'}, status=404)
-    elif payload['status']not in Order.Status.values:
+    elif payload['status'] not in Order.Status.values:
         return JsonResponse({'error': 'Invalid status'}, status=400)
+    elif not order.status == Order.Status.INITIATED:
+        return JsonResponse(
+            {'error': 'Orders can only be confirmed/cancelled when initiated'}, status=400
+        )
+    elif order.status == Order.Status.CONFIRMED:
+        order.status == Order.Status.CANCELLED
+        for game in order.games.all():
+            game.stock += 1
+            game.save()
+    else:
+        order.status == Order.Status.CONFIRMED
+    order.save()
+    return JsonResponse({'status': order.get_status_display()})
+
+
+@csrf_exempt
+@require_http_methods('POST')
+@auth_required
+def pay_order(request, order_pk):
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+    required = {'card-number', 'exp-date', 'cvc'}
+    if required - payload.keys():
+        return JsonResponse(
+            {
+                'error': 'Missing required fields',
+            },
+            status=400,
+        )
+    try:
+        order = Order.objects.get(pk=order_pk)
+    except Order.DoesNotExist:
+        return JsonResponse({'error': 'Order not found'}, status=404)
+    if request.user != order.user:
+        return JsonResponse({'error': 'User is not the owner of the requested order'}, status=403)
+    elif not order.status == Order.Status.CONFIRMED:
+        return JsonResponse({'error': 'Orders can only be paid when confirmed'}, status=400)
+    elif not re.match(r'^\d{4}-\d{4}-\d{4}-\d{4}$', payload['card-number']):
+        return JsonResponse({'error': 'Invalid card number'}, status=400)
+    elif not re.match(r'^(0[1-2]|1[0-2])/\d{4}$', payload['exp-date']):
+        return JsonResponse({'error': 'Invalid card number'}, status=400)
+    elif not re.match(r'^\d{3}$', payload['cvc']):
+        return JsonResponse({'error': 'Invalid card number'}, status=400)
+    current_date = datetime.now()
+    elif current_date.strftime("%m/%Y") > payload['exp-date']:
+        return JsonResponse({'error': 'Invalid card number'}, status=400)
+
