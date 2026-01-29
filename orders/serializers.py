@@ -8,8 +8,10 @@ class OrderSerializer(BaseSerializer):
         return {
             'id': str(instance.key),
             'status': instance.get_status_display(),
+            'key': str(instance.key) if instance.status == instance.Status.PAID else None,
             'user': UserSerializer(instance.user).serialize(),
             'games': GameSerializer(instance.games.all(), request=self.request).serialize(),
             'created_at': instance.created_at.isoformat(),
             'updated_at': instance.updated_at.isoformat(),
+            'price': instance.price,
         }

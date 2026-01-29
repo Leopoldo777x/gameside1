@@ -200,3 +200,7 @@ dump-data:
 [group('data')]
 @load-data: clean-data && show-users
     uv run manage.py loaddata fixtures/auth.json fixtures/games.json fixtures/platforms.json fixtures/categories.json fixtures/users.json fixtures/orders.json
+
+# Get pypas score
+@score:
+    pypas test | grep "RESULTADO FINAL" -A4

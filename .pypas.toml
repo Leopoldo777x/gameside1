@@ -1,4 +1,4 @@
-version = "0.1.9"
+version = "0.1.10"
 slug = "gameside"
 bundle = [
     "/docs/README.pdf",
@@ -39,3 +39,4 @@ test_cmd = "uv run pytest"
 "0.1.7" = "Arregla orden de errores en /api/orders/"
 "0.1.8" = "Corrige errores menores en justfile y README"
 "0.1.9" = "Añade score a los tests"
+"0.1.10" = "Añade receta para obtener el score de los tests"

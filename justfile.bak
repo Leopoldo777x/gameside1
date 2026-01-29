@@ -162,15 +162,15 @@ clean-data:
     ' 
     sqlite3 db.sqlite3 '
     delete from sqlite_sequence where
-    name="games_game" or
-    name="games_game_platforms" or
-    name="games_review" or
-    name="orders_order" or
-    name="categories_category" or
-    name="orders_order_games" or
-    name="platforms_platform" or
-    name="users_token";
-    update sqlite_sequence set seq=1 where name="auth_user";
+    name='\''games_game'\'' or
+    name='\''games_game_platforms'\'' or
+    name='\''games_review'\'' or
+    name='\''orders_order'\'' or
+    name='\''categories_category'\'' or
+    name='\''orders_order_games'\'' or
+    name='\''platforms_platform'\'' or
+    name='\''users_token'\'';
+    update sqlite_sequence set seq=1 where name='\''auth_user'\'';
     '
 
 # Generate fake data and populate database

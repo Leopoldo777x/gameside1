@@ -22,7 +22,4 @@ class Order(models.Model):
 
     @property
     def price(self):
-        price = 0
-        for game in self.games.all():
-            price += game.price
-        return price
+        return self.games.aggregate(total=Sum('price'))['total']
