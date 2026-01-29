@@ -1,6 +1,7 @@
 import json
 import re
-from datetime import datetime, date
+from datetime import datetime
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -30,7 +31,7 @@ def order_detail(request, order_pk):
     except Order.DoesNotExist:
         return JsonResponse({'error': 'Order not found'}, status=404)
     if request.user != order.user:
-        return JsonResponse({'error': 'User is not the owner of the requested order'}, status=404)
+        return JsonResponse({'error': 'User is not the owner of requested order'}, status=403)
 
     serializer = OrderSerializer(order, request=request)
     return serializer.json_response()
@@ -45,7 +46,7 @@ def order_game_list(request, order_pk):
     except Order.DoesNotExist:
         return JsonResponse({'error': 'Order not found'}, status=404)
     if request.user != order.user:
-        return JsonResponse({'error': 'User is not the owner of the requested order'}, status=404)
+        return JsonResponse({'error': 'User is not the owner of requested order'}, status=403)
     games = order.games.all()
     serializer = GameSerializer(games, request=request)
     return serializer.json_response()
@@ -73,11 +74,11 @@ def add_game_to_order(request, order_pk):
     except Order.DoesNotExist:
         return JsonResponse({'error': 'Order not found'}, status=404)
     try:
-        game = Game.object.get(slug=payload['game-slug'])
+        game = Game.objects.get(slug=payload['game-slug'])
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
     if request.user != order.user:
-        return JsonResponse({'error': 'User is not the owner of the requested order'}, status=404)
+        return JsonResponse({'error': 'User is not the owner of requested order'}, status=403)
     elif not game.stock:
         return JsonResponse({'error': 'Game out of stock'}, status=400)
     order.games.add(game)
@@ -108,14 +109,14 @@ def change_order_status(request, order_pk):
     except Order.DoesNotExist:
         return JsonResponse({'error': 'Order not found'}, status=404)
     if request.user != order.user:
-        return JsonResponse({'error': 'User is not the owner of the requested order'}, status=404)
+        return JsonResponse({'error': 'User is not the owner of requested order'}, status=403)
     elif payload['status'] not in Order.Status.values:
         return JsonResponse({'error': 'Invalid status'}, status=400)
-    elif not order.status == Order.Status.INITIATED:
+    elif not order.get_status_display() == Order.Status.INITIATED:
         return JsonResponse(
             {'error': 'Orders can only be confirmed/cancelled when initiated'}, status=400
         )
-    elif order.status == Order.Status.CONFIRMED:
+    if order.get_status_display() == Order.Status.CONFIRMED:
         order.status == Order.Status.CANCELLED
         for game in order.games.all():
             game.stock += 1
@@ -123,7 +124,7 @@ def change_order_status(request, order_pk):
     else:
         order.status == Order.Status.CONFIRMED
     order.save()
-    return JsonResponse({'status': order.get_status_display()})
+    return JsonResponse({'status': order.get_status_display()}, status=200)
 
 
 @csrf_exempt
@@ -147,16 +148,18 @@ def pay_order(request, order_pk):
     except Order.DoesNotExist:
         return JsonResponse({'error': 'Order not found'}, status=404)
     if request.user != order.user:
-        return JsonResponse({'error': 'User is not the owner of the requested order'}, status=403)
+        return JsonResponse({'error': 'User is not the owner of requested order'}, status=403)
     elif not order.status == Order.Status.CONFIRMED:
         return JsonResponse({'error': 'Orders can only be paid when confirmed'}, status=400)
     elif not re.match(r'^\d{4}-\d{4}-\d{4}-\d{4}$', payload['card-number']):
         return JsonResponse({'error': 'Invalid card number'}, status=400)
     elif not re.match(r'^(0[1-2]|1[0-2])/\d{4}$', payload['exp-date']):
-        return JsonResponse({'error': 'Invalid card number'}, status=400)
+        return JsonResponse({'error': 'Invalid expiration date'}, status=400)
     elif not re.match(r'^\d{3}$', payload['cvc']):
-        return JsonResponse({'error': 'Invalid card number'}, status=400)
-    current_date = datetime.now()
-    elif current_date.strftime("%m/%Y") > payload['exp-date']:
-        return JsonResponse({'error': 'Invalid card number'}, status=400)
+        return JsonResponse({'error': 'Invalid CVC'}, status=400)
 
+    elif datetime.now().strftime('%m/%Y') > payload['exp-date']:
+        return JsonResponse({'error': 'Card expired'}, status=400)
+    order.status = Order.Status.PAID
+    order.save()
+    return JsonResponse({'status': order.get_status_display(), 'key': order.key}, status=200)
