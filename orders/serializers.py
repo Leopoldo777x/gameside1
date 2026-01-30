@@ -6,7 +6,7 @@ from users.serializers import UserSerializer
 class OrderSerializer(BaseSerializer):
     def serialize_instance(self, instance) -> dict:
         return {
-            'id': str(instance.key),
+            'id': instance.pk,
             'status': instance.get_status_display(),
             'key': str(instance.key) if instance.status == instance.Status.PAID else None,
             'user': UserSerializer(instance.user).serialize(),

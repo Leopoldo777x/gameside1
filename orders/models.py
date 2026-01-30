@@ -2,7 +2,6 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Sum
 
 
 class Order(models.Model):
@@ -23,4 +22,7 @@ class Order(models.Model):
 
     @property
     def price(self):
-        return self.games.aggregate(total=Sum('price'))['total']
+        price = 0
+        for game.price in self.games.all():
+            price += price
+        return price

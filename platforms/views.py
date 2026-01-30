@@ -1,9 +1,11 @@
-import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+
 from shared.decorators import require_http_methods
+
 from .models import Platform
 from .serializers import PlatformSerializer
+
 
 @csrf_exempt
 @require_http_methods('GET')
